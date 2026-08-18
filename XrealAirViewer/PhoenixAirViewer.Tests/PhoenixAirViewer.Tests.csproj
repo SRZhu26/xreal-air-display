@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>PhoenixAirViewer.Tests</RootNamespace>
+    <AssemblyName>PhoenixAirViewer.Tests</AssemblyName>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <Deterministic>true</Deterministic>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PhoenixAirViewer.Core\PhoenixAirViewer.Core.csproj" />
+    <ProjectReference Include="..\PhoenixAirViewer.Platform\PhoenixAirViewer.Platform.csproj" />
+  </ItemGroup>
+</Project>
