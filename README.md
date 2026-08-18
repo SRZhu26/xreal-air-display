@@ -1,5 +1,19 @@
-# PhoenixHeadTracker
-The Phoenix Head Tracker is a program that interfaces with Xreal Air glasses to capture and analyze sensor data using custom version of [AirAPI_Windows.dll](https://github.com/MSmithDev/AirAPI_Windows) to support roll data. By detecting changes in the user's head yaw and pitch and roll, this program can send this data to opentrack over UDP or you can even control the movement of the computer mouse on screen which can be used to play video games that use mouse look feature. You can also use this feature with Nreal Air 3D SBS mode
+# XREAL Air Viewer
+
+XREAL Air Viewer is a Windows desktop viewer for using XREAL Air glasses as a stationary 3DoF display. It captures a selected desktop monitor and presents it on a configurable flat or curved panel while head rotation keeps the panel stable in the scene. This viewer is a separate application from the legacy PhoenixHeadTracker tracker below; it renders the desktop locally instead of sending pose data to OpenTrack or controlling the mouse.
+
+## Quickstart
+
+The viewer is an x64 .NET 8 developer build. Use Windows 10/11 with the original XREAL Air connected directly over USB-C, Windows configured to **Extend these displays**, and two distinct displays available: one for the captured desktop and one for the glasses output. Copy the x64 `AirAPI_Windows.dll` and `hidapi.dll` dependencies from the legacy application’s release folder before running the viewer. Their provenance and redistribution terms still need review before packaging a release.
+
+1. Restore and build `XrealAirViewer\XrealAirViewer.sln` for **Release | x64**.
+2. Launch `PhoenixAirViewer.App.dll` from the x64 Release output folder.
+3. Choose different source and output displays. The viewer refuses to start if both selections are the same or only one display is available.
+4. Click **Connect Air**, look straight ahead, and click **Recenter**. `Ctrl+Alt+Space` recenters while the output window is active.
+5. Choose the panel size, distance, curvature, roll lock, and horizon lock, then start **live desktop**.
+6. Close the viewer normally so the panel, tracking, and display settings are saved.
+
+The normal Release build writes diagnostic JSONL files under `%LOCALAPPDATA%\PhoenixAirViewer\logs\`. Use the `NoLogging | x64` configuration when file logging is not appropriate. The viewer does not record captured desktop pixels or credentials.
 
 ## PhoenixAirViewer (implementation in progress)
 
@@ -83,6 +97,13 @@ Use the `NoLogging` build when diagnostic files are not acceptable. It keeps the
 - Protected content, exclusive-fullscreen sources, GPU resets, output hotplug, and display resolution changes have recovery code but still need physical/manual validation.
 
 The bundled native DLL exports `StartConnection`, `StopConnection`, `GetEuler`, `GetQuaternion`, and `GetBrightness`. Its dependency and redistribution terms must still be verified before creating a release package.
+
+# Original PhoenixHeadTracker README
+
+The following section is preserved from the original [PhoenixHeadTracker repository](https://github.com/iVideoGameBoss/PhoenixHeadTracker) for attribution. It documents the PhoenixHeadTracker application and its OpenTrack and mouse-tracking workflows; it does not describe the separate XREAL Air Viewer above.
+
+# PhoenixHeadTracker
+The Phoenix Head Tracker is a program that interfaces with Xreal Air glasses to capture and analyze sensor data using custom version of [AirAPI_Windows.dll](https://github.com/MSmithDev/AirAPI_Windows) to support roll data. By detecting changes in the user's head yaw and pitch and roll, this program can send this data to opentrack over UDP or you can even control the movement of the computer mouse on screen which can be used to play video games that use mouse look feature. You can also use this feature with Nreal (Xreal) Air 3D SBS mode
 
 ## Support
 Hey, I created PhoenixHeadTracker for Xreal Air and would really appreciate your support. I work on this software on my own time for you guys. Thank You!
