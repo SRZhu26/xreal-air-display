@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>PhoenixAirViewer.App</RootNamespace>
+    <AssemblyName>PhoenixAirViewer.App</AssemblyName>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <Deterministic>true</Deterministic>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'NoLogging'">
+    <DefineConstants>$(DefineConstants);PHOENIX_NO_LOGGING</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PhoenixAirViewer.Core\PhoenixAirViewer.Core.csproj" />
+    <ProjectReference Include="..\PhoenixAirViewer.Platform\PhoenixAirViewer.Platform.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\PhoenixHeadTracker\bin\x64\Release\AirAPI_Windows.dll">
+      <Link>AirAPI_Windows.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\PhoenixHeadTracker\bin\x64\Release\hidapi.dll">
+      <Link>hidapi.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
