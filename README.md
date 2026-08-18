@@ -1,6 +1,89 @@
 # PhoenixHeadTracker
 The Phoenix Head Tracker is a program that interfaces with Xreal Air glasses to capture and analyze sensor data using custom version of [AirAPI_Windows.dll](https://github.com/MSmithDev/AirAPI_Windows) to support roll data. By detecting changes in the user's head yaw and pitch and roll, this program can send this data to opentrack over UDP or you can even control the movement of the computer mouse on screen which can be used to play video games that use mouse look feature. You can also use this feature with Nreal Air 3D SBS mode
 
+## PhoenixAirViewer (implementation in progress)
+
+The `XrealAirViewer` solution is a separate application foundation for a stationary 3DoF desktop viewer. The existing `PhoenixHeadTracker` WinForms/OpenTrack application remains unchanged as the legacy tracker.
+
+Implemented so far:
+
+- Quaternion-first pose contracts, normalization, shortest-path SLERP, recentering, smoothing, angular-velocity limiting, roll lock, and tested horizon lock in `PhoenixAirViewer.Core`.
+- An `AirPoseSource` adapter that uses the native `GetQuaternion` export and reports missing DLLs, wrong bitness, missing exports, null pointers, and invalid pose data.
+- Windows monitor enumeration by device name and monitor bounds.
+- A borderless output window with `Ctrl+Alt+Space` recenter support, distinct source/output display validation, and persisted monitor selection.
+- A background-thread live desktop panel using Desktop Duplication, a D3D11 swap chain, runtime-compiled shaders, quaternion camera counter-rotation, configurable size/distance, and flat or cylindrical curvature.
+- Settings persistence under `%APPDATA%\PhoenixAirViewer\settings.json`, including panel geometry, smoothing/lock settings, and display identities.
+- Capture/render resource recreation with bounded retry after access loss, device removal, display loss, or renderer exceptions.
+- Diagnostic JSON-lines logging with native, capture, session, renderer, and settings errors, plus a no-op logger for the quiet build.
+- A dependency-free test executable covering pose math, horizon lock, panel settings, persistence, logging, and latest-sample storage.
+
+The remaining release gates are physical validation with the original XREAL Air connected, confirmation of quaternion layout and axis signs, cross-adapter/output testing, richer telemetry, and native DLL provenance/redistribution review. The viewer targets .NET 8 Windows and x64; the legacy tracker remains .NET Framework 4.7.2.
+
+## PhoenixAirViewer quick start
+
+The current implementation is a developer-build foundation. It requires Windows 10/11 x64, the .NET 8 SDK, an x64 graphics adapter, and the native `AirAPI_Windows.dll` plus `hidapi.dll` files copied from the legacy x64 Release folder. The original XREAL Air is the first hardware target; quaternion layout and axis mapping are not yet certified on physical hardware.
+
+1. Connect the glasses directly over USB-C and set Windows to **Extend these displays**.
+2. Build the solution in x64.
+3. Launch the diagnostic build first so a reproducible log is available.
+4. Select different source and output displays. The current viewer intentionally refuses to start when only one display is available or both selections are the same.
+5. Click **Connect Air**, look straight ahead, and click **Recenter** or press `Ctrl+Alt+Space`.
+6. Adjust panel width, height, distance, curvature radius, roll lock, and horizon lock. Start **live desktop**.
+7. Stop the viewer before unplugging the glasses. Settings are saved when the control window closes.
+
+The control window remains on the selected normal monitor. The output is a borderless window positioned on the selected output monitor. A probe that presents to a hidden or normal monitor is not proof that the image is visible through physical glasses.
+
+### Build and run
+
+Use an installed `dotnet` command or the user-local SDK path shown below:
+
+```powershell
+$dotnet = 'C:\Users\shuairon\.dotnet\dotnet.exe'
+& $dotnet restore XrealAirViewer\XrealAirViewer.sln
+& $dotnet build XrealAirViewer\XrealAirViewer.sln --configuration Release -p:Platform=x64
+& $dotnet 'XrealAirViewer\PhoenixAirViewer.App\bin\x64\Release\net8.0-windows\PhoenixAirViewer.App.dll'
+```
+
+For a quiet build with no file logging:
+
+```powershell
+& $dotnet build XrealAirViewer\XrealAirViewer.sln --configuration NoLogging -p:Platform=x64
+& $dotnet 'XrealAirViewer\PhoenixAirViewer.App\bin\x64\NoLogging\net8.0-windows\PhoenixAirViewer.App.dll'
+```
+
+The normal Release build writes logs to `%LOCALAPPDATA%\PhoenixAirViewer\logs\` when file logging is enabled. The `NoLogging` configuration always uses the no-op logger and must not create log files. Neither variant records desktop pixels or credentials.
+
+### Tests and probes
+
+Run the x64 test DLL directly so the native dependency path and architecture are unambiguous:
+
+```powershell
+& $dotnet build XrealAirViewer\XrealAirViewer.sln --configuration Debug -p:Platform=x64
+$tests = 'XrealAirViewer\PhoenixAirViewer.Tests\bin\x64\Debug\net8.0-windows\PhoenixAirViewer.Tests.dll'
+& $dotnet $tests
+& $dotnet $tests --capture-probe
+& $dotnet $tests --renderer-probe
+& $dotnet $tests --session-probe
+```
+
+The default test path is hardware-independent. `--capture-probe` validates Desktop Duplication, `--renderer-probe` validates one D3D11 present, and `--session-probe` requires at least two Windows displays so source and output can be distinct. These probes do not validate quaternion axes or visible output inside the glasses.
+
+### Diagnostic workflow
+
+Use the normal Release build for hardware troubleshooting. Reproduce the issue, note the selected source/output displays and the exact motion or connection sequence, close the viewer cleanly, and collect the newest JSONL file from `%LOCALAPPDATA%\PhoenixAirViewer\logs\`. It contains startup/runtime information, display selection, native connection failures, pose validity errors, session transitions, recovery attempts, settings errors, and exception stacks. It does not contain captured screen images.
+
+Use the `NoLogging` build when diagnostic files are not acceptable. It keeps the same UI-visible errors and viewer behavior but deliberately does not create file logs.
+
+### Current limitations
+
+- Physical XREAL Air validation is still pending. Confirm `Wxyz` versus `Xyzw`, yaw/pitch/roll signs, and sensor-to-renderer basis with known head movements before distributing a release.
+- The first release path requires separate source and output displays on a compatible adapter. Cross-adapter capture-to-present transfer is not implemented.
+- This is 3DoF: it cannot provide translation-based room locking, true 6DoF parallax, eye tracking, or an absolute yaw reference.
+- Long sessions can still experience yaw drift. Recenter is the primary correction.
+- Protected content, exclusive-fullscreen sources, GPU resets, output hotplug, and display resolution changes have recovery code but still need physical/manual validation.
+
+The bundled native DLL exports `StartConnection`, `StopConnection`, `GetEuler`, `GetQuaternion`, and `GetBrightness`. Its dependency and redistribution terms must still be verified before creating a release package.
+
 ## Support
 Hey, I created PhoenixHeadTracker for Xreal Air and would really appreciate your support. I work on this software on my own time for you guys. Thank You!
 
