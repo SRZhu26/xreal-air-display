@@ -42,6 +42,85 @@ namespace PhoenixAirViewer.Core
             return Normalize(mapped);
         }
 
+        public static Quaternion ApplyAxisSensitivity(
+            Quaternion orientation,
+            float pitchSensitivity,
+            float yawSensitivity,
+            float rollSensitivity)
+        {
+            Quaternion normalizedOrientation = Normalize(orientation);
+            if (normalizedOrientation.W < 0.0f)
+            {
+                normalizedOrientation = new Quaternion(
+                    -normalizedOrientation.X,
+                    -normalizedOrientation.Y,
+                    -normalizedOrientation.Z,
+                    -normalizedOrientation.W);
+            }
+
+            Vector3 vectorPart = new Vector3(
+                normalizedOrientation.X,
+                normalizedOrientation.Y,
+                normalizedOrientation.Z);
+            float sineHalfAngle = vectorPart.Length();
+            if (sineHalfAngle <= 0.000001f)
+            {
+                return Quaternion.Identity;
+            }
+
+            float scalar = Math.Min(1.0f, Math.Max(-1.0f, normalizedOrientation.W));
+            float angle = 2.0f * (float)Math.Acos(scalar);
+            Vector3 rotationVector = vectorPart * (angle / sineHalfAngle);
+            Vector3 scaledRotationVector = new Vector3(
+                rotationVector.X * pitchSensitivity,
+                rotationVector.Y * yawSensitivity,
+                rotationVector.Z * rollSensitivity);
+            float scaledAngle = scaledRotationVector.Length();
+            if (scaledAngle <= 0.000001f)
+            {
+                return Quaternion.Identity;
+            }
+
+            return Normalize(Quaternion.CreateFromAxisAngle(scaledRotationVector / scaledAngle, scaledAngle));
+        }
+
+        public static float AngularVelocityDegreesPerSecond(Quaternion from, Quaternion to, double deltaSeconds)
+        {
+            if (deltaSeconds <= 0.000001)
+            {
+                return 0.0f;
+            }
+
+            return AngularDistanceRadians(from, to) * 180.0f / (float)Math.PI / (float)deltaSeconds;
+        }
+
+        public static Vector3 ToRotationVector(Quaternion orientation)
+        {
+            Quaternion normalizedOrientation = Normalize(orientation);
+            if (normalizedOrientation.W < 0.0f)
+            {
+                normalizedOrientation = new Quaternion(
+                    -normalizedOrientation.X,
+                    -normalizedOrientation.Y,
+                    -normalizedOrientation.Z,
+                    -normalizedOrientation.W);
+            }
+
+            Vector3 vectorPart = new Vector3(
+                normalizedOrientation.X,
+                normalizedOrientation.Y,
+                normalizedOrientation.Z);
+            float sineHalfAngle = vectorPart.Length();
+            if (sineHalfAngle <= 0.000001f)
+            {
+                return Vector3.Zero;
+            }
+
+            float scalar = Math.Min(1.0f, Math.Max(-1.0f, normalizedOrientation.W));
+            float angle = 2.0f * (float)Math.Acos(scalar);
+            return vectorPart * (angle / sineHalfAngle);
+        }
+
         public static float AngularDistanceRadians(Quaternion from, Quaternion to)
         {
             Quaternion normalizedFrom = Normalize(from);

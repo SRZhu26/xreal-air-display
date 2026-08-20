@@ -62,7 +62,7 @@ namespace PhoenixAirViewer.App
                 e.Graphics.DrawLine(axisPen, client.Width / 2, 0, client.Width / 2, client.Height);
                 e.Graphics.DrawLine(axisPen, 0, client.Height / 2, client.Width, client.Height / 2);
                 e.Graphics.DrawRectangle(borderPen, 2, 2, Math.Max(0, client.Width - 5), Math.Max(0, client.Height - 5));
-                e.Graphics.DrawString("Phoenix Air Viewer output test", textFont, textBrush, 28, 28);
+                e.Graphics.DrawString("XrealAirViewer output test", textFont, textBrush, 28, 28);
                 e.Graphics.DrawString(_display.DeviceName + "  " + client.Width + "x" + client.Height, textFont, textBrush, 28, 58);
             }
         }

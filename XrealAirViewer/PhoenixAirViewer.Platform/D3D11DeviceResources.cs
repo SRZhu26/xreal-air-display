@@ -31,8 +31,7 @@ namespace PhoenixAirViewer.Platform
             FeatureLevel[] featureLevels =
             {
                 FeatureLevel.Level_11_1,
-                FeatureLevel.Level_11_0,
-                FeatureLevel.Level_10_1
+                FeatureLevel.Level_11_0
             };
 
             ID3D11Device device;

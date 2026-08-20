@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 
 namespace PhoenixAirViewer.Core
 {
@@ -71,8 +73,13 @@ namespace PhoenixAirViewer.Core
         private static readonly JsonSerializerOptions SerializerOptions = new JsonSerializerOptions();
         private readonly object _sync = new object();
         private readonly string _filePath;
+        private readonly BlockingCollection<LogRecord> _queue;
+        private readonly Thread _writerThread;
         private StreamWriter _writer;
         private bool _disposed;
+        private string _lastWriteError;
+        private bool _failureReported;
+        private long _droppedRecordCount;
 
         public FileViewerLogger(string filePath)
         {
@@ -90,6 +97,13 @@ namespace PhoenixAirViewer.Core
 
             Directory.CreateDirectory(directory);
             _writer = OpenWriter();
+            _queue = new BlockingCollection<LogRecord>(new ConcurrentQueue<LogRecord>(), 1024);
+            _writerThread = new Thread(WriteLoop)
+            {
+                IsBackground = true,
+                Name = "Phoenix Air diagnostic writer"
+            };
+            _writerThread.Start();
         }
 
         public string FilePath
@@ -100,6 +114,28 @@ namespace PhoenixAirViewer.Core
         public bool IsEnabled
         {
             get { return true; }
+        }
+
+        public string LastWriteError
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    return _lastWriteError;
+                }
+            }
+        }
+
+        public long DroppedRecordCount
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    return _droppedRecordCount;
+                }
+            }
         }
 
         public static FileViewerLogger CreateDefault()
@@ -114,6 +150,16 @@ namespace PhoenixAirViewer.Core
 
         public void Write(ViewerLogLevel level, string eventName, string message, Exception exception = null)
         {
+            LogRecord record = new LogRecord
+            {
+                Utc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
+                Level = level.ToString(),
+                Event = eventName ?? string.Empty,
+                Message = message ?? string.Empty,
+                Exception = exception == null ? null : exception.ToString()
+            };
+
+            bool dropped = false;
             lock (_sync)
             {
                 if (_disposed)
@@ -123,26 +169,28 @@ namespace PhoenixAirViewer.Core
 
                 try
                 {
-                    RotateIfNeeded();
-                    LogRecord record = new LogRecord
+                    if (!_queue.TryAdd(record))
                     {
-                        Utc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
-                        Level = level.ToString(),
-                        Event = eventName ?? string.Empty,
-                        Message = message ?? string.Empty,
-                        Exception = exception == null ? null : exception.ToString()
-                    };
-                    _writer.WriteLine(JsonSerializer.Serialize(record, SerializerOptions));
-                    _writer.Flush();
+                        _droppedRecordCount++;
+                        dropped = true;
+                    }
                 }
-                catch
+                catch (InvalidOperationException)
                 {
+                    _droppedRecordCount++;
+                    dropped = true;
                 }
+            }
+
+            if (dropped)
+            {
+                ReportFailure("The diagnostic log queue is full; a record was dropped.");
             }
         }
 
         public void Dispose()
         {
+            bool stopped;
             lock (_sync)
             {
                 if (_disposed)
@@ -151,12 +199,27 @@ namespace PhoenixAirViewer.Core
                 }
 
                 _disposed = true;
+                _queue.CompleteAdding();
+            }
+
+            stopped = _writerThread == Thread.CurrentThread || _writerThread.Join(3000);
+            if (!stopped)
+            {
+                ReportFailure("The diagnostic writer did not stop within the shutdown timeout.");
+                return;
+            }
+
+            lock (_sync)
+            {
                 if (_writer != null)
                 {
+                    _writer.Flush();
                     _writer.Dispose();
                     _writer = null;
                 }
             }
+
+            _queue.Dispose();
         }
 
         private StreamWriter OpenWriter()
@@ -169,22 +232,102 @@ namespace PhoenixAirViewer.Core
             };
         }
 
+        private void WriteLoop()
+        {
+            try
+            {
+                foreach (LogRecord record in _queue.GetConsumingEnumerable())
+                {
+                    try
+                    {
+                        RotateIfNeeded();
+                        if (_writer == null)
+                        {
+                            _writer = OpenWriter();
+                        }
+
+                        _writer.WriteLine(JsonSerializer.Serialize(record, SerializerOptions));
+                        lock (_sync)
+                        {
+                            _lastWriteError = null;
+                            _failureReported = false;
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        ReportFailure(exception.ToString());
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                ReportFailure(exception.ToString());
+            }
+        }
+
         private void RotateIfNeeded()
         {
+            if (_writer == null)
+            {
+                _writer = OpenWriter();
+            }
+
             if (_writer.BaseStream.Length < MaximumFileBytes)
             {
                 return;
             }
 
-            _writer.Dispose();
-            string rotatedPath = _filePath + ".1";
-            if (File.Exists(rotatedPath))
+            StreamWriter oldWriter = _writer;
+            _writer = null;
+            try
             {
-                File.Delete(rotatedPath);
+                oldWriter.Flush();
+                oldWriter.Dispose();
+                string rotatedPath = _filePath + ".1";
+                if (File.Exists(rotatedPath))
+                {
+                    File.Delete(rotatedPath);
+                }
+
+                File.Move(_filePath, rotatedPath);
+                _writer = OpenWriter();
+            }
+            catch (Exception exception)
+            {
+                try
+                {
+                    oldWriter.Dispose();
+                }
+                catch (Exception disposeException)
+                {
+                    ReportFailure(disposeException.ToString());
+                }
+
+                ReportFailure(exception.ToString());
+                _writer = OpenWriter();
+            }
+        }
+
+        private void ReportFailure(string message)
+        {
+            bool shouldReport;
+            lock (_sync)
+            {
+                _lastWriteError = message;
+                shouldReport = !_failureReported;
+                _failureReported = true;
             }
 
-            File.Move(_filePath, rotatedPath);
-            _writer = OpenWriter();
+            if (shouldReport)
+            {
+                try
+                {
+                    Console.Error.WriteLine("PhoenixAirViewer logging failure: " + message);
+                }
+                catch
+                {
+                }
+            }
         }
 
         private sealed class LogRecord

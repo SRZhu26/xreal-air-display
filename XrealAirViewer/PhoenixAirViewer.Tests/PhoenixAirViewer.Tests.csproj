@@ -11,8 +11,23 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'NoLogging|x64'">
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <OutputPath>bin\x64\NoLogging\</OutputPath>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\PhoenixAirViewer.Core\PhoenixAirViewer.Core.csproj" />
     <ProjectReference Include="..\PhoenixAirViewer.Platform\PhoenixAirViewer.Platform.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\PhoenixHeadTracker\bin\x64\Release\AirAPI_Windows.dll">
+      <Link>AirAPI_Windows.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\PhoenixHeadTracker\bin\x64\Release\hidapi.dll">
+      <Link>hidapi.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>

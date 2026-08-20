@@ -14,6 +14,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'NoLogging'">
     <DefineConstants>$(DefineConstants);PHOENIX_NO_LOGGING</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\PhoenixAirViewer.Core\PhoenixAirViewer.Core.csproj" />

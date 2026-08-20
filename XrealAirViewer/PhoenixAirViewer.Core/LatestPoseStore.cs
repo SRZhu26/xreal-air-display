@@ -25,5 +25,14 @@ namespace PhoenixAirViewer.Core
                 return _hasSample;
             }
         }
+
+        public void Clear()
+        {
+            lock (_sync)
+            {
+                _latest = default(PoseSample);
+                _hasSample = false;
+            }
+        }
     }
 }

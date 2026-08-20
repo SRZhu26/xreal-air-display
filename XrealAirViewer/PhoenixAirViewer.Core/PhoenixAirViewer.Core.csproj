@@ -10,4 +10,9 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'NoLogging|x64'">
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <OutputPath>bin\x64\NoLogging\</OutputPath>
+  </PropertyGroup>
 </Project>
